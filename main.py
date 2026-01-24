@@ -335,15 +335,25 @@ def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_arti
     
     # Only use looked-up tour title from setlist; never user input
     if actual_tour_title:
-        # Extract year from tour title if present (e.g., "Bruno Mars Tour 2026" -> "2026")
+        # Extract year from tour title if present
         year_match = re.search(r'\b(20\d{2})\b', actual_tour_title)
         year_str = f" ({year_match.group(1)})" if year_match else ""
         
-        playlist_title = f"{actual_tour_title} Prep - {artist_name}"
-        description = f"Prepare for {actual_tour_title}{year_str}! Songs from {artist_name} you haven't heard yet - perfect for learning before the show."
+        # Clean up the title - remove redundant "Setlist" and artist name if already present
+        clean_title = actual_tour_title
+        # Remove "Setlist" if present since we'll add "Prep"
+        clean_title = re.sub(r'\bSetlist\s*-?\s*', '', clean_title, flags=re.IGNORECASE)
+        # Remove artist name if it's at the end
+        clean_title = re.sub(rf'\s*-?\s*{re.escape(artist_name)}\s*$', '', clean_title, flags=re.IGNORECASE)
+        clean_title = clean_title.strip(' -')
+        
+        playlist_title = f"{clean_title} Prep"
+        
+        # Clean description - use clean_title instead of actual_tour_title
+        description = f"Songs from {artist_name} you haven't heard yet. Perfect for learning before the show!"
     else:
         playlist_title = f"{artist_name} Concert Prep"
-        description = ""  # No description when no setlist found
+        description = ""
 
     # Use /me/playlists endpoint for better compatibility
     url = "https://api.spotify.com/v1/me/playlists"
@@ -532,7 +542,7 @@ def redirect_page():
 # Run the Flask app
 if __name__ == '__main__':
     # For production, use environment variable PORT, otherwise default to 5000
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5001))
     # Only run in debug mode if explicitly set in environment
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     app.run(debug=debug_mode, host="0.0.0.0", port=port, use_reloader=False)
