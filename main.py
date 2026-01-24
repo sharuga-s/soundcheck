@@ -1,14 +1,17 @@
 import os
 import base64
 import json
+import re
+from urllib.parse import urlencode
 from dotenv import load_dotenv
 import requests
-from flask import Flask, request, redirect, url_for
+from flask import Flask, request, redirect, url_for, session, render_template
 
 load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")  # Required for sessions
 
 # Spotify credentials from .env file
 client_id = os.getenv("CLIENT_ID")
@@ -26,7 +29,7 @@ def get_authorization_url():
         "scope": scope,
         "redirect_uri": redirect_uri,
     }
-    return f"{auth_url}?{requests.compat.urlencode(auth_params)}"
+    return f"{auth_url}?{urlencode(auth_params)}"
 
 def get_token(authorization_code):
     url = "https://accounts.spotify.com/api/token"
@@ -106,13 +109,13 @@ def user_top_tracks(access_token):
 
 ############################## RETRIEVE ARTIST'S TOP TRACKS FROM PAST 6 MONTHS ##############################
 
-def get_artist_id(access_token):
+def get_artist_id(access_token, artist_name):
     url = "https://api.spotify.com/v1/search"
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
     params = {
-        "q": ARTIST_NAME,
+        "q": artist_name,
         "type": "artist",
         "limit": 50
     }
@@ -120,12 +123,12 @@ def get_artist_id(access_token):
     
     if response.status_code == 200:
         data = response.json()
-        # Try to match exactly with ARTIST_NAME (ignoring case)
+        # Try to match exactly with artist_name (ignoring case)
         for artist in data["artists"]["items"]:
-            if ARTIST_NAME.strip().lower() == artist["name"].strip().lower():
+            if artist_name.strip().lower() == artist["name"].strip().lower():
                 return artist["id"], artist["name"]
         
-        print(f"Warning: No exact match found for '{ARTIST_NAME}', showing first result.")
+        print(f"Warning: No exact match found for '{artist_name}', showing first result.")
         # Return the first available result as fallback
         artist = data["artists"]["items"][0]
         return artist["id"], artist["name"]
@@ -133,29 +136,29 @@ def get_artist_id(access_token):
         print(f"Error searching for artist: {response.status_code}, {response.text}")
         return None, None
 
-def artist_top_tracks(access_token, artist_id):
+def artist_top_tracks(access_token, artist_id, artist_name):
     url = f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks"
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    params = {"time_range":"medium_term"} 
+    params = {"market": "US"}  # Market parameter is required for top-tracks endpoint
 
     response = requests.get(url, headers=headers, params=params)
     
     if response.status_code == 200:
         return response.json()["tracks"]
     else:
-        print(f"Error fetching {ARTIST_NAME}'s top tracks: {response.status_code}, {response.text}")
+        print(f"Error fetching {artist_name}'s top tracks: {response.status_code}, {response.text}")
         return None
 
 ############################## RETRIEVE SETLIST ##############################
 
 #Enhancement: If no matching playlist is found, return all playlists containing "setlist" and let the user choose manually.
-def find_setlist(access_token):
+def find_setlist(access_token, artist_name, concert_name, year):
     # API endpoint
     search_url = "https://api.spotify.com/v1/search"
 
     params = {
-        "q": f"{ARTIST_NAME} {CONCERT_NAME} Setlist",
+        "q": f"{artist_name} {concert_name} Setlist",
         "type": "playlist",
         "limit": 50
     }
@@ -174,8 +177,8 @@ def find_setlist(access_token):
             print("No playlists found.")
             return None
         
-        name_split = ARTIST_NAME.lower().split()
-        conc_split =  CONCERT_NAME.lower().split()
+        name_split = artist_name.lower().split()
+        conc_split = concert_name.lower().split()
             
     # Filter playlists that contain both artist name and 'setlist' in the title
         filtered_playlists = [
@@ -184,7 +187,7 @@ def find_setlist(access_token):
             and playlist['name']
             and any(part in playlist['name'].lower() for part in name_split)
             and ('setlist' in playlist['name'].lower() or 'concert' in playlist['name'].lower() or 'tour' in playlist['name'].lower())
-            and (any(part in playlist['name'].lower() for part in conc_split) or YEAR in playlist['name'])
+            and (any(part in playlist['name'].lower() for part in conc_split) or year in playlist['name'])
         ]
 
         if not filtered_playlists:
@@ -261,71 +264,108 @@ def track_in_list(track, track_list):
                {a['name'].lower().strip() for a in t.get('artists', []) if a and a.get('name')} == artists
                for t in track_list)
 
-def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_artist_tracks, setlist):
+def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_artist_tracks, setlist, artist_name, concert_name, year):
     known_songs = liked_songs + [track for track in top_user_tracks if track not in liked_songs]
 
     # filter tracks + extract URIs only for unknown songs
     unknown_songs_uris = []
+    
+    # Add artist's top tracks that user hasn't heard
     for i in top_artist_tracks:
         if i and not track_in_list(i, known_songs):
             unknown_songs_uris.append(i['uri'])
                      
+    # Add setlist tracks that user hasn't heard
+    if setlist:
+        for i in setlist:
+            track = i.get('track', {})
+            if track and not track_in_list(track, known_songs):
+                if track.get('uri') not in unknown_songs_uris:
+                    unknown_songs_uris.append(track.get('uri'))
 
-    for i in setlist:
-        track = i.get('track', {})
-        if track and not track_in_list(track, known_songs):
-            if track.get('uri') not in unknown_songs_uris:
-                unknown_songs_uris.append(track.get('uri'))
+    if not unknown_songs_uris:
+        return f"No new songs to add! You already know all the songs from {artist_name}'s setlist and top tracks."
+    
+    # Use /me/playlists endpoint for better compatibility
+    url = "https://api.spotify.com/v1/me/playlists"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
 
-    url = f"https://api.spotify.com/v1/users/{user_id}/playlists"
-    headers = {"Authorization": f"Bearer {access_token}"}
-
-    params = {"name":f"{ARTIST_NAME} Concert Prep Playlist",
-              "description": "x",
-              "public": False} 
+    # Create a more engaging playlist title
+    playlist_title = f"{concert_name} Prep - {artist_name}"
+    
+    params = {
+        "name": playlist_title,
+        "description": f"Get ready for {concert_name} ({year})! Songs from {artist_name} you haven't heard yet - perfect for learning before the show.",
+        "public": False
+    } 
 
     response = requests.post(url, headers=headers, json=params)
     if response.status_code != 201:
         return f"Error creating playlist: {response.status_code}, {response.text}"
 
     data = response.json()
-    id = data["id"]
-    url = data["external_urls"]["spotify"]
+    playlist_id = data["id"]
+    playlist_url = data["external_urls"]["spotify"]
 
-    playlist_url = f"https://api.spotify.com/v1/playlists/{id}/tracks"
-    playlist_headers =  {"Authorization": f"Bearer {access_token}"}
-    playlist_params = {"uris": unknown_songs_uris}
-    playlist_response = requests.post(playlist_url, headers=playlist_headers, json=playlist_params)
-    if playlist_response.status_code == 201:
-        return "Here's the link to your concert preparation playlist: " + url
-    else:
-        return f"Error adding tracks to playlist: {playlist_response.status_code}, {playlist_response.text}"
+    # Spotify API allows max 100 tracks per request, so we need to batch them
+    playlist_tracks_url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+    playlist_headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    
+    # Batch tracks in groups of 100
+    batch_size = 100
+    for i in range(0, len(unknown_songs_uris), batch_size):
+        batch_uris = unknown_songs_uris[i:i + batch_size]
+        playlist_params = {"uris": batch_uris}
+        playlist_response = requests.post(playlist_tracks_url, headers=playlist_headers, json=playlist_params)
+        if playlist_response.status_code not in [200, 201]:
+            return f"Error adding tracks to playlist: {playlist_response.status_code}, {playlist_response.text}"
+    
+    return f"Successfully created playlist with {len(unknown_songs_uris)} songs! Here's the link: {playlist_url}"
 
 
 
 # Route to handle logging in
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def login():
-    info = request.args.get("info", "")
-    if not info:
-        return "Please provide an artist name, concert name, and concert year in the query string (in the format ?info=artist_name/concert_name/year)", 400
+    if request.method == 'POST':
+        # Handle form submission
+        artist_name = request.form.get('artist_name', '').strip()
+        concert_name = request.form.get('concert_name', '').strip()
+        year = request.form.get('year', '').strip()
+        
+        if not artist_name or not concert_name or not year:
+            return render_template('index.html', error='Please fill in all fields.')
+        
+        # Store in session for use after redirect
+        session['artist_name'] = artist_name
+        session['concert_name'] = concert_name
+        session['year'] = year
 
-    info = info.split("/")
-    
-    if len(info) != 3:
-        return "The query string must contain artist_name, concert_name, and year separated by slashes.", 400
-
-    
-    global ARTIST_NAME
-    global CONCERT_NAME
-    global YEAR
-
-    ARTIST_NAME = info[0]  # Set the global artist name dynamically
-    CONCERT_NAME = info[1]
-    YEAR = info[2]
-
-    auth_url = get_authorization_url()
-    return redirect(auth_url)
+        auth_url = get_authorization_url()
+        return redirect(auth_url)
+    else:
+        # Handle GET request - show form or check for query string (backward compatibility)
+        info = request.args.get("info", "")
+        if info:
+            # Backward compatibility with query string format
+            info = info.split("/")
+            if len(info) == 3:
+                session['artist_name'] = info[0]
+                session['concert_name'] = info[1]
+                session['year'] = info[2]
+                auth_url = get_authorization_url()
+                return redirect(auth_url)
+            else:
+                return render_template('index.html', error='Invalid query string format. Please use the form below.')
+        
+        # Show the form
+        return render_template('index.html')
 
 
     
@@ -334,50 +374,101 @@ def login():
 def redirect_page():
     authorization_code = request.args.get('code')
     if not authorization_code:
-        return "Authorization code missing.", 400
+        return render_template('result.html', error='Authorization code missing. Please try again.')
 
     access_token = get_token(authorization_code)
     if not access_token:
-        return "Error retrieving access token.", 500
+        return render_template('result.html', error='Error retrieving access token. Please check your CLIENT_SECRET in the .env file.')
 
     user_prof = user_profile(access_token)
     if not user_prof:
-        return "Error retrieving user profile.", 500
+        return render_template('result.html', error='Error retrieving user profile.')
 
     liked_songs = user_liked_songs(access_token)
     if not liked_songs:
-        return "Error retrieving user's liked songs.", 500
+        return render_template('result.html', error='Error retrieving user\'s liked songs.')
     
     top_user_tracks = user_top_tracks(access_token)
     if not top_user_tracks:
-        return "Error retrieving user's top tracks.", 500
+        return render_template('result.html', error='Error retrieving user\'s top tracks.')
     
-    artist_id = get_artist_id(access_token)
-    if not artist_id:
-        return "Error retrieving artist's ID.", 500
-    artist_id = artist_id[0]
+    # Retrieve artist/concert info from session
+    artist_name = session.get('artist_name')
+    concert_name = session.get('concert_name')
+    year = session.get('year')
     
-    top_artist_tracks = artist_top_tracks(access_token, artist_id)
+    if not artist_name or not concert_name or not year:
+        return render_template('result.html', error='Session expired. Please start over and provide artist name, concert name, and year.')
+    
+    artist_id = get_artist_id(access_token, artist_name)
+    if not artist_id or not artist_id[0]:
+        return render_template('result.html', error=f'Error retrieving artist\'s ID. Could not find "{artist_name}".')
+    artist_id_value = artist_id[0]
+    actual_artist_name = artist_id[1]  # Use the actual Spotify artist name
+    
+    top_artist_tracks = artist_top_tracks(access_token, artist_id_value, actual_artist_name)
     if not top_artist_tracks:
-        return "Error retrieving artist's top tracks.", 500
+        return render_template('result.html', error='Error retrieving artist\'s top tracks.')
    
-    new = ""
-    setlist = find_setlist(access_token)
-    if setlist != None:
-        new = unheard_tracks(user_prof["id"], access_token, liked_songs, top_user_tracks, top_artist_tracks, setlist)
-        print(new)
+    setlist = find_setlist(access_token, actual_artist_name, concert_name, year)
+    playlist_result = ""
+    playlist_url = None
+    
+    if setlist is not None:
+        playlist_result = unheard_tracks(user_prof["id"], access_token, liked_songs, top_user_tracks, top_artist_tracks, setlist, actual_artist_name, concert_name, year)
+        print(playlist_result)
+    else:
+        # If no setlist found, still create playlist with just artist's top tracks
+        playlist_result = unheard_tracks(user_prof["id"], access_token, liked_songs, top_user_tracks, top_artist_tracks, [], actual_artist_name, concert_name, year)
+        print(playlist_result)
 
-    # Combine user profile and top tracks into a single response
-    result = {
-        "user_profile": user_prof,
-        "liked_songs": liked_songs,
-        "user_top_tracks": top_user_tracks,
-        "setlist": setlist,
-        "concert_prep_playlist": new
-    }
-    return json.dumps(result, indent=4)
+    # Extract playlist URL from result if it contains one
+    if playlist_result:
+        # Try multiple patterns to extract the URL
+        url_patterns = [
+            r'https://open\.spotify\.com/playlist/[a-zA-Z0-9]+',
+            r'https://open\.spotify\.com/playlist/[^\s]+',
+        ]
+        for pattern in url_patterns:
+            url_match = re.search(pattern, playlist_result)
+            if url_match:
+                playlist_url = url_match.group(0)
+                break
+        
+        # Also try splitting by common phrases
+        if not playlist_url:
+            for phrase in ["Here's the link:", "link:", "Link:"]:
+                if phrase in playlist_result:
+                    try:
+                        potential_url = playlist_result.split(phrase)[1].strip().split()[0]
+                        if potential_url.startswith('http'):
+                            playlist_url = potential_url
+                            break
+                    except:
+                        pass
+
+    # Use actual artist name for display
+    display_artist_name = actual_artist_name
+    
+    # Render the result template
+    return render_template('result.html',
+        artist_name=display_artist_name,
+        concert_name=concert_name,
+        year=year,
+        liked_songs_count=len(liked_songs),
+        user_top_tracks_count=len(top_user_tracks),
+        artist_top_tracks_count=len(top_artist_tracks),
+        setlist_found=setlist is not None,
+        setlist_tracks_count=len(setlist) if setlist else 0,
+        playlist_result=playlist_result,
+        playlist_url=playlist_url
+    )
 
 
 # Run the Flask app
 if __name__ == '__main__':
-    app.run(debug=True, host="127.0.0.1", port=5000, use_reloader=False)
+    # For production, use environment variable PORT, otherwise default to 5000
+    port = int(os.environ.get('PORT', 5000))
+    # Only run in debug mode if explicitly set in environment
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug_mode, host="0.0.0.0", port=port, use_reloader=False)
