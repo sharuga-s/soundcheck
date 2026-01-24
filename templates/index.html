@@ -111,6 +111,12 @@
             font-size: 13px;
             line-height: 1.5;
         }
+        
+        .optional {
+            font-weight: 400;
+            color: #888;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -123,7 +129,7 @@
         {% endif %}
         
         <div class="info">
-            Enter the details below and we'll create a playlist of songs you haven't heard yet from the artist's setlist and top tracks.
+            Enter the artist (required) and at least one of concert/tour name or year. We'll create a playlist of songs you haven't heard yet.
         </div>
         
         <form method="POST" action="/">
@@ -140,25 +146,23 @@
             </div>
             
             <div class="form-group">
-                <label for="concert_name">Concert Name *</label>
+                <label for="concert_name">Concert / Tour Name <span class="optional">(optional)</span></label>
                 <input 
                     type="text" 
                     id="concert_name" 
                     name="concert_name" 
                     placeholder="e.g., The Eras Tour" 
-                    required
                     value="{{ request.form.concert_name if request.form else '' }}"
                 >
             </div>
             
             <div class="form-group">
-                <label for="year">Year *</label>
+                <label for="year">Year <span class="optional">(optional)</span></label>
                 <input 
                     type="text" 
                     id="year" 
                     name="year" 
                     placeholder="e.g., 2024" 
-                    required
                     value="{{ request.form.year if request.form else '' }}"
                 >
             </div>

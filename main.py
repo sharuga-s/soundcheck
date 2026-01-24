@@ -153,12 +153,19 @@ def artist_top_tracks(access_token, artist_id, artist_name):
 ############################## RETRIEVE SETLIST ##############################
 
 #Enhancement: If no matching playlist is found, return all playlists containing "setlist" and let the user choose manually.
-def find_setlist(access_token, artist_name, concert_name, year):
-    # API endpoint
+def find_setlist(access_token, artist_name, concert_name=None, year=None):
+    # API endpoint; concert_name and year are optional
     search_url = "https://api.spotify.com/v1/search"
 
+    search_parts = [artist_name]
+    if concert_name:
+        search_parts.append(concert_name)
+    search_parts.append("Setlist")
+    if year:
+        search_parts.append(year)
+
     params = {
-        "q": f"{artist_name} {concert_name} Setlist",
+        "q": " ".join(search_parts),
         "type": "playlist",
         "limit": 50
     }
@@ -175,24 +182,59 @@ def find_setlist(access_token, artist_name, concert_name, year):
 
         if not playlists:
             print("No playlists found.")
-            return None
-        
-        name_split = artist_name.lower().split()
-        conc_split = concert_name.lower().split()
-            
-    # Filter playlists that contain both artist name and 'setlist' in the title
-        filtered_playlists = [
-            playlist for playlist in playlists
-            if playlist
-            and playlist['name']
-            and any(part in playlist['name'].lower() for part in name_split)
-            and ('setlist' in playlist['name'].lower() or 'concert' in playlist['name'].lower() or 'tour' in playlist['name'].lower())
-            and (any(part in playlist['name'].lower() for part in conc_split) or year in playlist['name'])
-        ]
+            return None, None
 
-        if not filtered_playlists:
+        name_split = artist_name.lower().split()
+        conc_split = (concert_name or "").lower().split()
+
+        # Filter: artist + setlist/concert/tour required; concert and year are optional hints
+        # We prioritize matches with concert/year but still return good matches without them
+        def matches(playlist):
+            if not playlist or not playlist.get('name'):
+                return False
+            name_lower = playlist['name'].lower()
+            # Must have artist name
+            if not any(part in name_lower for part in name_split):
+                return False
+            # Must have setlist/concert/tour keyword
+            if 'setlist' not in name_lower and 'concert' not in name_lower and 'tour' not in name_lower:
+                return False
+            return True
+
+        def score(playlist):
+            """Score playlists - higher is better. Prioritize matches with concert/year."""
+            if not playlist or not playlist.get('name'):
+                return 0
+            name_lower = playlist['name'].lower()
+            score = 0
+            # Bonus for matching concert name (if provided)
+            if conc_split:
+                for part in conc_split:
+                    if part in name_lower:
+                        score += 10
+            # Bonus for matching year (if provided)
+            if year and year in playlist['name']:
+                score += 5
+            return score
+
+        # Filter to valid playlists
+        valid_playlists = [p for p in playlists if matches(p)]
+        
+        if not valid_playlists:
             print("No playlists match the criteria.")
-            return None
+            return None, None
+
+        # Sort by score (best matches first), then we'll pick the one with most followers
+        scored_playlists = [(score(p), p) for p in valid_playlists]
+        scored_playlists.sort(reverse=True, key=lambda x: x[0])
+        
+        # Use top-scored playlists (within top score range) for follower comparison
+        if scored_playlists:
+            top_score = scored_playlists[0][0]
+            # Consider playlists within 5 points of top score
+            filtered_playlists = [p for s, p in scored_playlists if s >= max(0, top_score - 5)]
+        else:
+            filtered_playlists = valid_playlists
 
         # Find the playlist with the most followers
         most_followed_playlist = None
@@ -221,19 +263,20 @@ def find_setlist(access_token, artist_name, concert_name, year):
             print(f"URL: {most_followed_playlist['url']}")
         else:
             print("No playlists found.")
-            return None
-        
+            return None, None
+
         url = f"https://api.spotify.com/v1/playlists/{most_followed_playlist['id']}/tracks"
         headers = {
             "Authorization": f"Bearer {access_token}"
         }
         response = requests.get(url, headers=headers)
-        return response.json()["items"]
-
-
+        tracks = response.json()["items"]
+        actual_tour_title = most_followed_playlist["name"]
+        return tracks, actual_tour_title
 
     else:
         print(f"Error: {response.status_code}, {response.text}")
+        return None, None
 
 
 ############################## COMPARE USER'S LISTENED TRACKS TO ARTIST TRACKS + SETLIST ##############################
@@ -264,7 +307,11 @@ def track_in_list(track, track_list):
                {a['name'].lower().strip() for a in t.get('artists', []) if a and a.get('name')} == artists
                for t in track_list)
 
-def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_artist_tracks, setlist, artist_name, concert_name, year):
+def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_artist_tracks, setlist, artist_name, actual_tour_title=None):
+    """
+    artist_name: must be the looked-up Spotify artist name (never user input).
+    actual_tour_title: setlist playlist name when found; never use user's concert/tour input.
+    """
     known_songs = liked_songs + [track for track in top_user_tracks if track not in liked_songs]
 
     # filter tracks + extract URIs only for unknown songs
@@ -286,6 +333,18 @@ def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_arti
     if not unknown_songs_uris:
         return f"No new songs to add! You already know all the songs from {artist_name}'s setlist and top tracks."
     
+    # Only use looked-up tour title from setlist; never user input
+    if actual_tour_title:
+        # Extract year from tour title if present (e.g., "Bruno Mars Tour 2026" -> "2026")
+        year_match = re.search(r'\b(20\d{2})\b', actual_tour_title)
+        year_str = f" ({year_match.group(1)})" if year_match else ""
+        
+        playlist_title = f"{actual_tour_title} Prep - {artist_name}"
+        description = f"Prepare for {actual_tour_title}{year_str}! Songs from {artist_name} you haven't heard yet - perfect for learning before the show."
+    else:
+        playlist_title = f"{artist_name} Concert Prep"
+        description = ""  # No description when no setlist found
+
     # Use /me/playlists endpoint for better compatibility
     url = "https://api.spotify.com/v1/me/playlists"
     headers = {
@@ -293,12 +352,9 @@ def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_arti
         "Content-Type": "application/json"
     }
 
-    # Create a more engaging playlist title
-    playlist_title = f"{concert_name} Prep - {artist_name}"
-    
     params = {
         "name": playlist_title,
-        "description": f"Get ready for {concert_name} ({year})! Songs from {artist_name} you haven't heard yet - perfect for learning before the show.",
+        "description": description,
         "public": False
     } 
 
@@ -334,18 +390,20 @@ def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_arti
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Handle form submission
+        # Handle form submission - artist required; at least one of concert or year
         artist_name = request.form.get('artist_name', '').strip()
         concert_name = request.form.get('concert_name', '').strip()
         year = request.form.get('year', '').strip()
         
-        if not artist_name or not concert_name or not year:
-            return render_template('index.html', error='Please fill in all fields.')
+        if not artist_name:
+            return render_template('index.html', error='Artist name is required.')
+        if not concert_name and not year:
+            return render_template('index.html', error='Please also enter a concert/tour name or year (at least two fields total).')
         
         # Store in session for use after redirect
         session['artist_name'] = artist_name
-        session['concert_name'] = concert_name
-        session['year'] = year
+        session['concert_name'] = concert_name or ''
+        session['year'] = year or ''
 
         auth_url = get_authorization_url()
         return redirect(auth_url)
@@ -353,16 +411,18 @@ def login():
         # Handle GET request - show form or check for query string (backward compatibility)
         info = request.args.get("info", "")
         if info:
-            # Backward compatibility with query string format
-            info = info.split("/")
-            if len(info) == 3:
-                session['artist_name'] = info[0]
-                session['concert_name'] = info[1]
-                session['year'] = info[2]
+            # Backward compatibility: ?info=artist/concert/year or artist/concert or artist//year
+            parts = [p.strip() for p in info.split("/")]
+            if len(parts) >= 2 and parts[0]:
+                session['artist_name'] = parts[0]
+                session['concert_name'] = parts[1] if len(parts) > 1 and parts[1] else ''
+                session['year'] = parts[2] if len(parts) > 2 and parts[2] else ''
+                if not session['concert_name'] and not session['year']:
+                    return render_template('index.html', error='Provide at least artist + concert or year (e.g. ?info=Artist/Concert or Artist//2024).')
                 auth_url = get_authorization_url()
                 return redirect(auth_url)
             else:
-                return render_template('index.html', error='Invalid query string format. Please use the form below.')
+                return render_template('index.html', error='Use ?info=artist/concert/year (or artist/concert or artist//year).')
         
         # Show the form
         return render_template('index.html')
@@ -394,11 +454,11 @@ def redirect_page():
     
     # Retrieve artist/concert info from session
     artist_name = session.get('artist_name')
-    concert_name = session.get('concert_name')
-    year = session.get('year')
+    concert_name = session.get('concert_name') or ''
+    year = session.get('year') or ''
     
-    if not artist_name or not concert_name or not year:
-        return render_template('result.html', error='Session expired. Please start over and provide artist name, concert name, and year.')
+    if not artist_name:
+        return render_template('result.html', error='Session expired. Please start over and enter an artist name.')
     
     artist_id = get_artist_id(access_token, artist_name)
     if not artist_id or not artist_id[0]:
@@ -410,16 +470,21 @@ def redirect_page():
     if not top_artist_tracks:
         return render_template('result.html', error='Error retrieving artist\'s top tracks.')
    
-    setlist = find_setlist(access_token, actual_artist_name, concert_name, year)
+    setlist_result = find_setlist(access_token, actual_artist_name, concert_name or None, year or None)
+    setlist_tracks = None
+    actual_tour_title = None
+    if setlist_result[0] is not None:
+        setlist_tracks, actual_tour_title = setlist_result
+
     playlist_result = ""
     playlist_url = None
-    
-    if setlist is not None:
-        playlist_result = unheard_tracks(user_prof["id"], access_token, liked_songs, top_user_tracks, top_artist_tracks, setlist, actual_artist_name, concert_name, year)
+
+    if setlist_tracks is not None:
+        playlist_result = unheard_tracks(user_prof["id"], access_token, liked_songs, top_user_tracks, top_artist_tracks, setlist_tracks, actual_artist_name, actual_tour_title=actual_tour_title)
         print(playlist_result)
     else:
-        # If no setlist found, still create playlist with just artist's top tracks
-        playlist_result = unheard_tracks(user_prof["id"], access_token, liked_songs, top_user_tracks, top_artist_tracks, [], actual_artist_name, concert_name, year)
+        # No setlist: use only looked-up artist name, no tour title (never user input)
+        playlist_result = unheard_tracks(user_prof["id"], access_token, liked_songs, top_user_tracks, top_artist_tracks, [], actual_artist_name)
         print(playlist_result)
 
     # Extract playlist URL from result if it contains one
@@ -447,19 +512,18 @@ def redirect_page():
                     except:
                         pass
 
-    # Use actual artist name for display
+    # Only use looked-up values for display; never user input
     display_artist_name = actual_artist_name
-    
-    # Render the result template
+    display_tour = actual_tour_title if actual_tour_title else "No setlist found"
+
     return render_template('result.html',
         artist_name=display_artist_name,
-        concert_name=concert_name,
-        year=year,
+        tour_name=display_tour,
         liked_songs_count=len(liked_songs),
         user_top_tracks_count=len(top_user_tracks),
         artist_top_tracks_count=len(top_artist_tracks),
-        setlist_found=setlist is not None,
-        setlist_tracks_count=len(setlist) if setlist else 0,
+        setlist_found=setlist_tracks is not None,
+        setlist_tracks_count=len(setlist_tracks) if setlist_tracks else 0,
         playlist_result=playlist_result,
         playlist_url=playlist_url
     )
