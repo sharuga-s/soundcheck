@@ -7,16 +7,22 @@ from dotenv import load_dotenv
 import requests
 from flask import Flask, request, redirect, url_for, session, render_template
 
-load_dotenv()
+if os.getenv("VERCEL") is None:
+    load_dotenv()
 
 # Initialize Flask app
-app = Flask(__name__)
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(os.path.dirname(__file__), "..", "templates")
+)
+
 app.secret_key = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")  # Required for sessions
 
 # Spotify credentials from .env file
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET") #make this dynamic
-redirect_uri = os.getenv("REDIRECT_URI", "http://127.0.0.1:5000/redirect")  # Default to localhost
+redirect_uri = os.getenv("REDIRECT_URI")
 
 ############################## RETRIEVE USER'S TOP TRACKS FROM PAST 6 MONTHS ##############################
 
@@ -539,4 +545,4 @@ def redirect_page():
     )
 
 
-    app = app
+app = app
