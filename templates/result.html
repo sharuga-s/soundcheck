@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ConcertPlaybook - Results</title>
+    <title>soundcheck - Results</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0a0a0a;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -22,42 +22,47 @@
         }
         
         .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            padding: 48px;
             max-width: 600px;
             width: 100%;
+            border: 1px solid #e5e5e5;
         }
         
         h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
+            color: #000000;
+            margin-bottom: 24px;
+            font-size: 32px;
             text-align: center;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
         
         .success {
-            background: #e8f5e9;
-            color: #2e7d32;
-            padding: 16px;
-            border-radius: 10px;
-            margin: 20px 0;
-            border-left: 4px solid #4caf50;
+            background: #f0fdf4;
+            color: #166534;
+            padding: 16px 18px;
+            border-radius: 8px;
+            margin: 24px 0;
+            border-left: 3px solid #22c55e;
+            font-size: 14px;
+            line-height: 1.6;
         }
         
         .info-box {
             background: #f5f5f5;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
+            padding: 24px;
+            border-radius: 8px;
+            margin: 24px 0;
         }
         
         .info-row {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e5e5;
         }
         
         .info-row:last-child {
@@ -66,64 +71,75 @@
         
         .info-label {
             font-weight: 600;
-            color: #666;
+            color: #666666;
+            font-size: 14px;
         }
         
         .info-value {
-            color: #333;
+            color: #000000;
+            font-size: 14px;
         }
         
         .playlist-link {
             display: inline-block;
-            margin-top: 20px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            margin-top: 16px;
+            padding: 14px 24px;
+            background: #000000;
+            color: #ffffff;
             text-decoration: none;
-            border-radius: 10px;
+            border-radius: 8px;
             font-weight: 600;
-            transition: transform 0.2s;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            letter-spacing: -0.2px;
         }
         
         .playlist-link:hover {
-            transform: translateY(-2px);
+            background: #1a1a1a;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         .error {
             background: #fee;
             color: #c33;
-            padding: 16px;
-            border-radius: 10px;
-            margin: 20px 0;
-            border-left: 4px solid #f44336;
+            padding: 16px 18px;
+            border-radius: 8px;
+            margin: 24px 0;
+            border-left: 3px solid #c33;
+            font-size: 14px;
+            line-height: 1.6;
         }
         
         .back-btn {
             display: inline-block;
-            margin-top: 20px;
-            padding: 12px 24px;
-            background: #e0e0e0;
-            color: #333;
+            margin-top: 24px;
+            padding: 14px 24px;
+            background: #f5f5f5;
+            color: #000000;
             text-decoration: none;
-            border-radius: 10px;
+            border-radius: 8px;
             font-weight: 600;
-            transition: background 0.2s;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            letter-spacing: -0.2px;
+            border: 1px solid #e5e5e5;
         }
         
         .back-btn:hover {
-            background: #d0d0d0;
+            background: #e5e5e5;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎵 ConcertPlaybook Results</h1>
+        <h1>soundcheck Results</h1>
         
         {% if error %}
         <div class="error">
             <strong>Error:</strong> {{ error }}
         </div>
-        <a href="/" class="back-btn">← Try Again</a>
+        <a href="/" class="back-btn">Try Again</a>
         {% else %}
         
         <div class="info-box">
@@ -155,16 +171,16 @@
         
         {% if playlist_result %}
         <div class="success">
-            <strong>🎉 Success!</strong><br>
+            <strong>Success!</strong><br>
             {{ playlist_result }}
             {% if playlist_url %}
             <br><br>
-            <a href="{{ playlist_url }}" target="_blank" class="playlist-link">Open Playlist on Spotify →</a>
+            <a href="{{ playlist_url }}" target="_blank" class="playlist-link">Open Playlist on Spotify</a>
             {% endif %}
         </div>
         {% endif %}
         
-        <a href="/" class="back-btn">← Create Another Playlist</a>
+        <a href="/" class="back-btn">Create Another Playlist</a>
         {% endif %}
     </div>
 </body>

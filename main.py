@@ -400,20 +400,22 @@ def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_arti
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Handle form submission - artist required; at least one of concert or year
+        # Handle form submission - all three fields required
         artist_name = request.form.get('artist_name', '').strip()
         concert_name = request.form.get('concert_name', '').strip()
         year = request.form.get('year', '').strip()
         
         if not artist_name:
             return render_template('index.html', error='Artist name is required.')
-        if not concert_name and not year:
-            return render_template('index.html', error='Please also enter a concert/tour name or year (at least two fields total).')
+        if not concert_name:
+            return render_template('index.html', error='Concert/tour name is required.')
+        if not year:
+            return render_template('index.html', error='Year is required.')
         
         # Store in session for use after redirect
         session['artist_name'] = artist_name
-        session['concert_name'] = concert_name or ''
-        session['year'] = year or ''
+        session['concert_name'] = concert_name
+        session['year'] = year
 
         auth_url = get_authorization_url()
         return redirect(auth_url)
@@ -421,18 +423,16 @@ def login():
         # Handle GET request - show form or check for query string (backward compatibility)
         info = request.args.get("info", "")
         if info:
-            # Backward compatibility: ?info=artist/concert/year or artist/concert or artist//year
+            # Backward compatibility: ?info=artist/concert/year
             parts = [p.strip() for p in info.split("/")]
-            if len(parts) >= 2 and parts[0]:
+            if len(parts) >= 3 and parts[0] and parts[1] and parts[2]:
                 session['artist_name'] = parts[0]
-                session['concert_name'] = parts[1] if len(parts) > 1 and parts[1] else ''
-                session['year'] = parts[2] if len(parts) > 2 and parts[2] else ''
-                if not session['concert_name'] and not session['year']:
-                    return render_template('index.html', error='Provide at least artist + concert or year (e.g. ?info=Artist/Concert or Artist//2024).')
+                session['concert_name'] = parts[1]
+                session['year'] = parts[2]
                 auth_url = get_authorization_url()
                 return redirect(auth_url)
             else:
-                return render_template('index.html', error='Use ?info=artist/concert/year (or artist/concert or artist//year).')
+                return render_template('index.html', error='All three fields required: artist, concert, and year (e.g. ?info=Artist/Concert/2024).')
         
         # Show the form
         return render_template('index.html')
