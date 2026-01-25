@@ -539,10 +539,4 @@ def redirect_page():
     )
 
 
-# Run the Flask app
-if __name__ == '__main__':
-    # For production, use environment variable PORT, otherwise default to 5000
-    port = int(os.environ.get('PORT', 5001))
-    # Only run in debug mode if explicitly set in environment
-    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
-    app.run(debug=debug_mode, host="0.0.0.0", port=port, use_reloader=False)
+    app = app
