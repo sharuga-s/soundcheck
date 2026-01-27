@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ColorBends from './ColorBends';
 import './App.css';
 
@@ -8,7 +8,7 @@ function App() {
   const [year, setYear] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault();
     
     if (!artistName) {
@@ -16,11 +16,10 @@ function App() {
       return;
     }
     if (!concertName && !year) {
-      setError('Please also enter a concert/tour name or year.');
+      setError('Please enter a concert/tour name or year.');
       return;
     }
 
-    // Redirect to Flask backend
     const formData = new URLSearchParams();
     formData.append('artist_name', artistName);
     formData.append('concert_name', concertName);
@@ -33,17 +32,16 @@ function App() {
     <div className="app">
       <ColorBends
         className="background"
-        colors={['#1a1a1a', '#2d2d2d', '#404040']}
-        speed={0.15}
-        rotation={0}
-        autoRotate={2}
-        scale={1.5}
-        frequency={0.8}
-        warpStrength={0.6}
-        mouseInfluence={0.2}
-        parallax={0.3}
-        noise={0.02}
-        transparent={false}
+        colors={['#0a4d3c', '#1a6b54', '#2d8c6d', '#3fad85']}
+        speed={0.2}
+        rotation={45}
+        autoRotate={10}
+        scale={1.2}
+        frequency={1.2}
+        warpStrength={1.0}
+        mouseInfluence={0.5}
+        parallax={0.5}
+        noise={0.03}
       />
       
       <div className="container">
@@ -54,7 +52,7 @@ function App() {
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="artist_name">Artist Name *</label>
+            <label htmlFor="artist_name">ARTIST NAME *</label>
             <input
               type="text"
               id="artist_name"
@@ -67,7 +65,7 @@ function App() {
           
           <div className="form-group">
             <label htmlFor="concert_name">
-              Concert / Tour Name <span className="optional">optional</span>
+              CONCERT / TOUR NAME <span className="optional">optional</span>
             </label>
             <input
               type="text"
@@ -80,7 +78,7 @@ function App() {
           
           <div className="form-group">
             <label htmlFor="year">
-              Year <span className="optional">optional</span>
+              YEAR <span className="optional">optional</span>
             </label>
             <input
               type="text"
