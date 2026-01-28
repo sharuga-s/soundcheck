@@ -543,7 +543,3 @@ def redirect_page():
         playlist_result=playlist_result,
         playlist_url=playlist_url
     )
-
-
-# For Vercel serverless deployment
-app = app
