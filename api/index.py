@@ -448,10 +448,21 @@ def login():
 
 
     
-# Route to handle the redirect URI after user authorizes
+# Route to handle the redirect URI after user authorizes - shows loading page
 @app.route('/redirect')
 @app.route('/api/redirect')
 def redirect_page():
+    authorization_code = request.args.get('code')
+    if not authorization_code:
+        return render_template('result.html', error='Authorization code missing. Please try again.')
+    
+    # Show loading page, which will redirect to /process
+    return render_template('loading.html', code=authorization_code)
+
+# Route to actually process and create the playlist
+@app.route('/process')
+@app.route('/api/process')
+def process_playlist():
     authorization_code = request.args.get('code')
     if not authorization_code:
         return render_template('result.html', error='Authorization code missing. Please try again.')

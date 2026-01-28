@@ -7,6 +7,7 @@ function App() {
   const [concertName, setConcertName] = useState('');
   const [year, setYear] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Memoize the colors array so it doesn't change on every render
   const backgroundColors = useMemo(() => ['#0a4d3c', '#1a6b54', '#2d8c6d', '#3fad85'], []);
@@ -46,6 +47,9 @@ function App() {
       return;
     }
 
+    // Show loading screen
+    setIsLoading(true);
+
     // Create a form and submit it as POST to the API
     const form = document.createElement('form');
     form.method = 'POST';
@@ -83,51 +87,57 @@ function App() {
         noise={0.03}
       />
       
-      <div className="container">
-        <h1>soundcheck</h1>
-        <p className="subtitle">Learn the setlist before you show up.</p>
-        
-        {error && <div className="error">{error}</div>}
-        
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="form-group">
-            <label htmlFor="artist_name">ARTIST NAME *</label>
-            <input
-              type="text"
-              id="artist_name"
-              value={artistName}
-              onChange={(e) => { setArtistName(e.target.value); setError(''); }}
-              placeholder="Taylor Swift"
-            />
-          </div>
+      {isLoading ? (
+        <div className="container loading-container">
+          <div className="loading-text">Loading<span className="loading-dots"></span></div>
+        </div>
+      ) : (
+        <div className="container">
+          <h1>soundcheck</h1>
+          <p className="subtitle">Learn the setlist before you show up.</p>
           
-          <div className="form-group">
-            <label htmlFor="concert_name">CONCERT / TOUR NAME *</label>
-            <input
-              type="text"
-              id="concert_name"
-              value={concertName}
-              onChange={(e) => { setConcertName(e.target.value); setError(''); }}
-              placeholder="The Eras Tour"
-            />
-          </div>
+          {error && <div className="error">{error}</div>}
           
-          <div className="form-group">
-            <label htmlFor="year">YEAR *</label>
-            <input
-              type="text"
-              id="year"
-              value={year}
-              onChange={(e) => { setYear(e.target.value); setError(''); }}
-              placeholder="2024"
-            />
-          </div>
-          
-          <button type="submit" className="submit-btn">
-            Create Playlist
-          </button>
-        </form>
-      </div>
+          <form onSubmit={handleSubmit} noValidate>
+            <div className="form-group">
+              <label htmlFor="artist_name">ARTIST NAME *</label>
+              <input
+                type="text"
+                id="artist_name"
+                value={artistName}
+                onChange={(e) => { setArtistName(e.target.value); setError(''); }}
+                placeholder="Taylor Swift"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="concert_name">CONCERT / TOUR NAME *</label>
+              <input
+                type="text"
+                id="concert_name"
+                value={concertName}
+                onChange={(e) => { setConcertName(e.target.value); setError(''); }}
+                placeholder="The Eras Tour"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="year">YEAR *</label>
+              <input
+                type="text"
+                id="year"
+                value={year}
+                onChange={(e) => { setYear(e.target.value); setError(''); }}
+                placeholder="2024"
+              />
+            </div>
+            
+            <button type="submit" className="submit-btn">
+              Create Playlist
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

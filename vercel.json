@@ -4,6 +4,7 @@
   "framework": null,
   "rewrites": [
     { "source": "/redirect", "destination": "/api/index.py" },
+    { "source": "/process", "destination": "/api/index.py" },
     { "source": "/api", "destination": "/api/index.py" },
     { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/(.*)", "destination": "/index.html" }
