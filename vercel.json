@@ -1,8 +1,7 @@
 {
-  "framework": null,
-
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/build",
+  "installCommand": "cd frontend && npm install",
 
   "functions": {
     "api/*.py": {
@@ -10,14 +9,14 @@
     }
   },
 
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
