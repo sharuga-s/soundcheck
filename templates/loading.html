@@ -78,14 +78,15 @@
         <div class="loading-text">Creating your playlist<span class="loading-dots"></span></div>
     </div>
     
-    <script>
-    // Redirect to process the playlist
-    window.location.href = '/api/process?code={{ code }}';
-    </script>
-    
     <script src="/colorbends.js"></script>
     <script>
+    // Initialize background first
     initColorBends('color-bends');
+    
+    // Then redirect after a brief moment so user sees the loading screen
+    setTimeout(function() {
+        window.location.href = '/api/process?code={{ code }}';
+    }, 100);
     </script>
 </body>
 </html>
