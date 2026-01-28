@@ -116,6 +116,16 @@
             max-width: 60%;
         }
         
+        .setlist-link {
+            color: #000000;
+            text-decoration: underline;
+            transition: opacity 0.2s ease;
+        }
+        
+        .setlist-link:hover {
+            opacity: 0.6;
+        }
+        
         .btn-group {
             display: flex;
             flex-direction: column;
@@ -218,7 +228,11 @@
         {% if playlist_url %}
         <div class="success-banner">
             <h2>Playlist Created!</h2>
-            <p>We found {{ setlist_tracks_count if setlist_found else 0 }} setlist tracks and created a playlist with songs you haven't heard yet.</p>
+            {% if setlist_found %}
+            <p>We found a setlist for {{ artist_name }} with {{ setlist_tracks_count }} tracks and created a playlist with songs you haven't heard yet.</p>
+            {% else %}
+            <p>We couldn't find a setlist, so we created a playlist using {{ artist_name }}'s top tracks that you haven't heard yet.</p>
+            {% endif %}
         </div>
         {% endif %}
         
@@ -229,11 +243,17 @@
             </div>
             <div class="info-row">
                 <span class="info-label">Tour / Setlist</span>
-                <span class="info-value">{{ tour_name if tour_name != 'No setlist found' else 'Using top tracks' }}</span>
+                <span class="info-value">
+                    {% if setlist_url %}
+                    <a href="{{ setlist_url }}" target="_blank" class="setlist-link">{{ tour_name }}</a>
+                    {% else %}
+                    {{ tour_name if tour_name != 'No setlist found' else 'Using top tracks' }}
+                    {% endif %}
+                </span>
             </div>
             <div class="info-row">
                 <span class="info-label">Your Library</span>
-                <span class="info-value">{{ liked_songs_count }} liked songs</span>
+                <span class="info-value">{{ liked_songs_count }} Liked Songs</span>
             </div>
             <div class="info-row">
                 <span class="info-label">New Songs Added</span>

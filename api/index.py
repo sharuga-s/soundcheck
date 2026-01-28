@@ -269,7 +269,7 @@ def find_setlist(access_token, artist_name, concert_name=None, year=None):
             print(f"URL: {most_followed_playlist['url']}")
         else:
             print("No playlists found.")
-            return None, None
+            return None, None, None
 
         url = f"https://api.spotify.com/v1/playlists/{most_followed_playlist['id']}/tracks"
         headers = {
@@ -278,11 +278,12 @@ def find_setlist(access_token, artist_name, concert_name=None, year=None):
         response = requests.get(url, headers=headers)
         tracks = response.json()["items"]
         actual_tour_title = most_followed_playlist["name"]
-        return tracks, actual_tour_title
+        setlist_url = most_followed_playlist["url"]
+        return tracks, actual_tour_title, setlist_url
 
     else:
         print(f"Error: {response.status_code}, {response.text}")
-        return None, None
+        return None, None, None
 
 
 ############################## COMPARE USER'S LISTENED TRACKS TO ARTIST TRACKS + SETLIST ##############################
@@ -492,8 +493,9 @@ def redirect_page():
     setlist_result = find_setlist(access_token, actual_artist_name, concert_name or None, year or None)
     setlist_tracks = None
     actual_tour_title = None
+    setlist_url = None
     if setlist_result[0] is not None:
-        setlist_tracks, actual_tour_title = setlist_result
+        setlist_tracks, actual_tour_title, setlist_url = setlist_result
 
     playlist_result = ""
     playlist_url = None
@@ -544,5 +546,6 @@ def redirect_page():
         setlist_found=setlist_tracks is not None,
         setlist_tracks_count=len(setlist_tracks) if setlist_tracks else 0,
         playlist_result=playlist_result,
-        playlist_url=playlist_url
+        playlist_url=playlist_url,
+        setlist_url=setlist_url
     )

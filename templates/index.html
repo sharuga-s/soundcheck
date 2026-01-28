@@ -201,6 +201,16 @@
                 errorDiv.textContent = 'Please fill in all fields before submitting.';
                 errorDiv.classList.add('show');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else if (artistName.length < 2) {
+                e.preventDefault();
+                errorDiv.textContent = 'Please enter a valid artist name.';
+                errorDiv.classList.add('show');
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else if (!/^\d{4}$/.test(year)) {
+                e.preventDefault();
+                errorDiv.textContent = 'Please enter a valid year (e.g., 2024).';
+                errorDiv.classList.add('show');
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } else {
                 errorDiv.classList.remove('show');
             }

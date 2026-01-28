@@ -19,6 +19,32 @@ function App() {
       setError('Please fill in all fields before submitting.');
       return;
     }
+    
+    // Validate artist name is at least 2 characters
+    if (artistName.trim().length < 2) {
+      setError('Please enter a valid artist name.');
+      return;
+    }
+    
+    // Validate concert name is at least 2 characters
+    if (concertName.trim().length < 2) {
+      setError('Please enter a valid concert/tour name.');
+      return;
+    }
+    
+    // Validate year is a 4-digit number
+    if (!/^\d{4}$/.test(year.trim())) {
+      setError('Please enter a valid year (e.g., 2024).');
+      return;
+    }
+    
+    // Validate year is in reasonable range (1950 to next year)
+    const yearNum = parseInt(year.trim());
+    const currentYear = new Date().getFullYear();
+    if (yearNum < 1950 || yearNum > currentYear + 1) {
+      setError(`Please enter a year between 1950 and ${currentYear + 1}.`);
+      return;
+    }
 
     // Create a form and submit it as POST to the API
     const form = document.createElement('form');
