@@ -15,13 +15,8 @@ function App() {
     e.preventDefault();
     
     // Check all required fields
-    const missingFields = [];
-    if (!artistName.trim()) missingFields.push('Artist Name');
-    if (!concertName.trim()) missingFields.push('Concert / Tour Name');
-    if (!year.trim()) missingFields.push('Year');
-    
-    if (missingFields.length > 0) {
-      setError('Please fill in ' + missingFields.join(', ') + ' before submitting.');
+    if (!artistName.trim() || !concertName.trim() || !year.trim()) {
+      setError('Please fill in all fields before submitting.');
       return;
     }
 

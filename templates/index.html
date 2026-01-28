@@ -196,14 +196,9 @@
             const year = document.getElementById('year').value.trim();
             const errorDiv = document.getElementById('error-message');
             
-            const missingFields = [];
-            if (!artistName) missingFields.push('Artist Name');
-            if (!concertName) missingFields.push('Concert / Tour Name');
-            if (!year) missingFields.push('Year');
-            
-            if (missingFields.length > 0) {
+            if (!artistName || !concertName || !year) {
                 e.preventDefault();
-                errorDiv.textContent = 'Please fill in ' + missingFields.join(', ') + ' before submitting.';
+                errorDiv.textContent = 'Please fill in all fields before submitting.';
                 errorDiv.classList.add('show');
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } else {
