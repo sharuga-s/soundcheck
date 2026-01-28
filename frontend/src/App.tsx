@@ -22,13 +22,25 @@ function App() {
       return;
     }
 
-    const formData = new URLSearchParams();
-    formData.append('artist_name', artistName);
-    formData.append('concert_name', concertName);
-    formData.append('year', year);
-
-    // Use relative URL so it works in both local and production
-    window.location.href = `/api/?${formData.toString()}`;
+    // Create a form and submit it as POST to the API
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/';
+    
+    const addField = (name: string, value: string) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    };
+    
+    addField('artist_name', artistName);
+    addField('concert_name', concertName);
+    addField('year', year);
+    
+    document.body.appendChild(form);
+    form.submit();
   };
 
   return (
