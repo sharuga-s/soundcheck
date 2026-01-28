@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import ColorBends from './ColorBends';
 import './App.css';
 
@@ -7,6 +7,9 @@ function App() {
   const [concertName, setConcertName] = useState('');
   const [year, setYear] = useState('');
   const [error, setError] = useState('');
+
+  // Memoize the colors array so it doesn't change on every render
+  const backgroundColors = useMemo(() => ['#0a4d3c', '#1a6b54', '#2d8c6d', '#3fad85'], []);
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
@@ -33,7 +36,7 @@ function App() {
     <div className="app">
       <ColorBends
         className="background"
-        colors={['#0a4d3c', '#1a6b54', '#2d8c6d', '#3fad85']}
+        colors={backgroundColors}
         speed={0.2}
         rotation={45}
         autoRotate={10}
