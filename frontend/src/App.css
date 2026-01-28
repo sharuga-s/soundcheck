@@ -116,7 +116,7 @@ input[type="text"]::placeholder {
 }
 
 .error {
-  background: #000;
+  background: #374151;
   color: #fff;
   padding: 14px 16px;
   border-radius: 2px;

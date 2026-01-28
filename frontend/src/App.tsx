@@ -68,16 +68,15 @@ function App() {
         
         {error && <div className="error">{error}</div>}
         
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <div className="form-group">
             <label htmlFor="artist_name">ARTIST NAME *</label>
             <input
               type="text"
               id="artist_name"
               value={artistName}
-              onChange={(e) => setArtistName(e.target.value)}
+              onChange={(e) => { setArtistName(e.target.value); setError(''); }}
               placeholder="Taylor Swift"
-              required
             />
           </div>
           
@@ -87,9 +86,8 @@ function App() {
               type="text"
               id="concert_name"
               value={concertName}
-              onChange={(e) => setConcertName(e.target.value)}
+              onChange={(e) => { setConcertName(e.target.value); setError(''); }}
               placeholder="The Eras Tour"
-              required
             />
           </div>
           
@@ -99,9 +97,8 @@ function App() {
               type="text"
               id="year"
               value={year}
-              onChange={(e) => setYear(e.target.value)}
+              onChange={(e) => { setYear(e.target.value); setError(''); }}
               placeholder="2024"
-              required
             />
           </div>
           
