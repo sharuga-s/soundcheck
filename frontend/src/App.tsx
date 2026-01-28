@@ -14,11 +14,14 @@ function App() {
   const handleSubmit = (e: any) => {
     e.preventDefault();
     
-    // Count how many fields are filled
-    const filledFields = [artistName, concertName, year].filter(field => field.trim()).length;
+    // Check all required fields
+    const missingFields = [];
+    if (!artistName.trim()) missingFields.push('Artist Name');
+    if (!concertName.trim()) missingFields.push('Concert / Tour Name');
+    if (!year.trim()) missingFields.push('Year');
     
-    if (filledFields < 2) {
-      setError('Please fill in at least 2 fields.');
+    if (missingFields.length > 0) {
+      setError('Please fill in ' + missingFields.join(', ') + ' before submitting.');
       return;
     }
 
@@ -79,28 +82,26 @@ function App() {
           </div>
           
           <div className="form-group">
-            <label htmlFor="concert_name">
-              CONCERT / TOUR NAME <span className="optional">optional</span>
-            </label>
+            <label htmlFor="concert_name">CONCERT / TOUR NAME *</label>
             <input
               type="text"
               id="concert_name"
               value={concertName}
               onChange={(e) => setConcertName(e.target.value)}
               placeholder="The Eras Tour"
+              required
             />
           </div>
           
           <div className="form-group">
-            <label htmlFor="year">
-              YEAR <span className="optional">optional</span>
-            </label>
+            <label htmlFor="year">YEAR *</label>
             <input
               type="text"
               id="year"
               value={year}
               onChange={(e) => setYear(e.target.value)}
               placeholder="2024"
+              required
             />
           </div>
           
