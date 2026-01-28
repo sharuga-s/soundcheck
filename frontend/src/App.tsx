@@ -14,12 +14,11 @@ function App() {
   const handleSubmit = (e: any) => {
     e.preventDefault();
     
-    if (!artistName) {
-      setError('Artist name is required.');
-      return;
-    }
-    if (!concertName && !year) {
-      setError('Please enter a concert/tour name or year.');
+    // Count how many fields are filled
+    const filledFields = [artistName, concertName, year].filter(field => field.trim()).length;
+    
+    if (filledFields < 2) {
+      setError('Please fill in at least 2 fields.');
       return;
     }
 
