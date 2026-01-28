@@ -545,4 +545,5 @@ def redirect_page():
     )
 
 
+# For Vercel serverless deployment
 app = app
