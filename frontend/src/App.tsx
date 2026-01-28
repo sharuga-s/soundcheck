@@ -25,7 +25,8 @@ function App() {
     formData.append('concert_name', concertName);
     formData.append('year', year);
 
-    window.location.href = `http://localhost:5001/?${formData.toString()}`;
+    // Use relative URL so it works in both local and production
+    window.location.href = `/api/?${formData.toString()}`;
   };
 
   return (
