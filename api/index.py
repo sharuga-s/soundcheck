@@ -404,6 +404,8 @@ def unheard_tracks(user_id, access_token, liked_songs, top_user_tracks, top_arti
 
 # Route to handle logging in
 @app.route('/', methods=['GET', 'POST'])
+@app.route('/api/', methods=['GET', 'POST'])
+@app.route('/api', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         # Handle form submission - all three fields required
@@ -447,6 +449,7 @@ def login():
     
 # Route to handle the redirect URI after user authorizes
 @app.route('/redirect')
+@app.route('/api/redirect')
 def redirect_page():
     authorization_code = request.args.get('code')
     if not authorization_code:
