@@ -1,14 +1,16 @@
 {
+  "framework": null,
+
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/build",
-  "devCommand": "cd frontend && npm start",
-  "installCommand": "pip install -r requirements.txt && cd frontend && npm install",
-  "framework": null,
+
+  "functions": {
+    "api/*.py": {
+      "runtime": "python3.9"
+    }
+  },
+
   "rewrites": [
-    {
-      "source": "/redirect",
-      "destination": "/api/redirect"
-    },
     {
       "source": "/api/(.*)",
       "destination": "/api/index.py"
