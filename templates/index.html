@@ -121,6 +121,11 @@
             margin-bottom: 24px;
             font-size: 14px;
             border-left: 3px solid #c33;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
         }
         
         .info {
@@ -140,15 +145,13 @@
         <h1>soundcheck</h1>
         <p class="subtitle">All the songs you need to learn before the show, in one place.</p>
         
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
+        <div class="error" id="error-message"></div>
         
         <div class="info">
             Enter the artist, concert/tour name, and year to create a playlist of songs you haven't heard yet.
         </div>
         
-        <form method="POST" action="/">
+        <form method="POST" action="/api/" id="playlist-form" novalidate>
             <div class="form-group">
                 <label for="artist_name">Artist Name *</label>
                 <input 
@@ -156,7 +159,6 @@
                     id="artist_name" 
                     name="artist_name" 
                     placeholder="e.g., Taylor Swift" 
-                    required
                     value="{{ request.form.artist_name if request.form else '' }}"
                 >
             </div>
@@ -168,7 +170,6 @@
                     id="concert_name" 
                     name="concert_name" 
                     placeholder="e.g., The Eras Tour" 
-                    required
                     value="{{ request.form.concert_name if request.form else '' }}"
                 >
             </div>
@@ -180,7 +181,6 @@
                     id="year" 
                     name="year" 
                     placeholder="e.g., 2024" 
-                    required
                     value="{{ request.form.year if request.form else '' }}"
                 >
             </div>
@@ -188,5 +188,28 @@
             <button type="submit" class="submit-btn">Create My Playlist 🎤</button>
         </form>
     </div>
+    
+    <script>
+        document.getElementById('playlist-form').addEventListener('submit', function(e) {
+            const artistName = document.getElementById('artist_name').value.trim();
+            const concertName = document.getElementById('concert_name').value.trim();
+            const year = document.getElementById('year').value.trim();
+            const errorDiv = document.getElementById('error-message');
+            
+            const missingFields = [];
+            if (!artistName) missingFields.push('Artist Name');
+            if (!concertName) missingFields.push('Concert / Tour Name');
+            if (!year) missingFields.push('Year');
+            
+            if (missingFields.length > 0) {
+                e.preventDefault();
+                errorDiv.textContent = 'Please fill in ' + missingFields.join(', ') + ' before submitting.';
+                errorDiv.classList.add('show');
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                errorDiv.classList.remove('show');
+            }
+        });
+    </script>
 </body>
 </html>
